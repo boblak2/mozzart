@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:id="@+id/llToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:background="#ccc">
+
+        <Button
+            android:id="@+id/btnPrev"
+            android:layout_width="@dimen/btn_tool"
+            android:layout_height="@dimen/btn_tool"
+            android:background="@drawable/ic_prev_foreground"
+            android:onClick="didPressBtn"/>
+
+        <Button
+            android:id="@+id/btnPlay"
+            android:layout_width="@dimen/btn_tool"
+            android:layout_height="@dimen/btn_tool"
+            android:background="@drawable/ic_play_foreground"
+            android:onClick="didPressBtn"/>
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="@dimen/btn_tool"
+            android:layout_height="@dimen/btn_tool"
+            android:background="@drawable/ic_stop_foreground"
+            android:onClick="didPressBtn"/>
+
+        <Button
+            android:id="@+id/btnNext"
+            android:layout_width="@dimen/btn_tool"
+            android:layout_height="@dimen/btn_tool"
+            android:background="@drawable/ic_next_foreground"
+            android:onClick="didPressBtn"/>
+
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/listview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/llToolbar"/>
+
+    <ImageView
+        android:id="@+id/imgThumb"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_alignParentBottom="true"/>
+
+</RelativeLayout>
