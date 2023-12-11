@@ -16,6 +16,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.ListView
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.TimePicker
 import android.widget.Toast
@@ -26,16 +27,20 @@ class MainActivity : AppCompatActivity() {
     companion object{
         val tag = "MainActivity"
         fun myData(){
-
+            println("test myData fun")
         }
     }
 
+    private var adapter: ItemAdapter? = null
     private var player: MediaPlayer? = null
     private var selItem: Item? = null
     private var index: Int? = null
     private val data: ArrayList<Item> = arrayListOf<Item>()
     private var length: Int? = null
     private var btnPlay: Button? = null
+    private var seekbar: SeekBar? = null
+    private var isPause: Boolean = false
+    private var timer: Timer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,8 +48,9 @@ class MainActivity : AppCompatActivity() {
 
         val listview = findViewById<ListView>(R.id.listview)
         btnPlay = findViewById(R.id.btnPlay)
+        seekbar = findViewById(R.id.seekbar)
 
-        val adapter = ItemAdapter(this, R.layout.row_item, data)
+        adapter = ItemAdapter(this, R.layout.row_item, data)
         listview.adapter = adapter
         listview.setOnItemClickListener { parent, view, position, id ->
             selItem = data[position]
@@ -66,7 +72,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        adapter.notifyDataSetChanged()
+        adapter?.notifyDataSetChanged()
 
         //Set index
         if (data.isNotEmpty()){
@@ -76,6 +82,28 @@ class MainActivity : AppCompatActivity() {
 
         //with apply also run?(with+let) let?
 
+        //seekbar?.setOnSeekBarChangeListener = SeekBar.OnSeekBarChangeListener{
+        //}
+
+        val seekBarListener = object :SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser){
+                    player?.let {
+                        it.seekTo(progress)
+                        startTimer()
+                    }
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                println("onstart")
+                stopTimer()
+            }
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                println("onstop")
+            }
+        }
+        seekbar?.setOnSeekBarChangeListener(seekBarListener)
     }
 
     private fun initPlayer(){
@@ -90,11 +118,37 @@ class MainActivity : AppCompatActivity() {
             //prepare()
             //start()
         }
+        player?.setOnCompletionListener {
+            println("song finished")
+
+            if (index!! == data.size-1){
+                //last
+                index = 0
+                selItem = data[index!!]
+                adapter?.setSelected(index!!)
+                adapter?.notifyDataSetChanged()
+                stop()
+            }else if (index!! <= data.size-2){
+                //predzadnji
+                index = index!! + 1
+                selItem = data[index!!]
+                play(selItem?.path!!)
+            }
+        }
     }
 
     private fun play(url: String){
+
+        index?.let {
+            adapter?.setSelected(it)
+            adapter?.notifyDataSetChanged()
+        }
+
+        stopTimer()
+
         if (player != null && player!!.isPlaying()){
             player?.stop()
+            player?.reset()
             player?.release()
         }
         initPlayer()
@@ -102,10 +156,24 @@ class MainActivity : AppCompatActivity() {
         player?.prepare()
         player?.start()
         extractImage()
+        isPause = false
+        btnPlay?.setBackgroundResource(R.drawable.ic_pause_foreground)
+
+        //Seekbar
+        selItem?.let {
+            seekbar?.max = player!!.duration
+            seekbar?.progress = 0
+
+            startTimer()
+        }
     }
 
     private fun stop(){
+        stopTimer()
         player?.stop()
+        isPause = false
+        seekbar?.progress = 0
+        btnPlay?.setBackgroundResource(R.drawable.ic_play_foreground)
     }
 
     private fun pause(){
@@ -113,6 +181,8 @@ class MainActivity : AppCompatActivity() {
             if (it.isPlaying()){
                 it.pause()
                 length = it.currentPosition
+                isPause = true
+                btnPlay?.setBackgroundResource(R.drawable.ic_play_foreground)
             }
         }
     }
@@ -123,6 +193,8 @@ class MainActivity : AppCompatActivity() {
                 player?.seekTo(length!!)
                 player?.start()
                 length = null
+                isPause = false;
+                btnPlay?.setBackgroundResource(R.drawable.ic_pause_foreground)
             }
         }
     }
@@ -130,20 +202,22 @@ class MainActivity : AppCompatActivity() {
     fun didPressBtn(view: View) {
         when(view.id){
             R.id.btnPlay -> {
+
                 selItem?.let {
-                    if (player != null && player!!.isPlaying){
-                        pause()
-                        btnPlay?.setBackgroundResource(R.drawable.ic_play_foreground)
-                    }else{
+
+                    if (player == null){
                         play(selItem?.path.toString())
-                        btnPlay?.setBackgroundResource(R.drawable.ic_pause_foreground)
-                    }
+                    }else if (player!!.isPlaying)
+                        pause()
+                    else if (isPause)
+                        resume()
+                    else
+                        play(selItem?.path.toString())
                 }
             }
 
             R.id.btnStop -> {
                 stop()
-                btnPlay?.setBackgroundResource(R.drawable.ic_play_foreground)
             }
 
             R.id.btnPrev -> {
@@ -186,4 +260,44 @@ class MainActivity : AppCompatActivity() {
         }
         //artist?.let { Toast.makeText(this, "Artist $artist", Toast.LENGTH_LONG).show() }
     }
+
+
+    private fun startTimer(){
+        stopTimer()
+        timer = Timer()
+        timer?.start()
+    }
+
+    private fun stopTimer(){
+        timer?.let {
+            it.stopTimer()
+            it.join()
+            timer = null
+        }
+    }
+
+    inner class Timer : Thread(){
+        @Volatile private var isRunning: Boolean = true
+        override fun run() {
+            super.run()
+
+            try {
+                while (isRunning){
+                    Thread.sleep(500)
+                    player?.let {
+
+                        seekbar?.progress = it.currentPosition
+                    }
+                }
+            }catch (e: InterruptedException){
+                isRunning = false
+            }
+        }
+
+        fun stopTimer(){
+            isRunning = false
+            interrupt()
+        }
+    }
 }
+
